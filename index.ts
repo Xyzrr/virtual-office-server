@@ -42,7 +42,7 @@ export class State extends Schema {
   update(delta: number) {
     this.players.forEach((player) => {
       player.x += player.speed * Math.cos(player.dir) * delta;
-      player.y += player.speed * Math.sin(player.dir) * delta;
+      player.y -= player.speed * Math.sin(player.dir) * delta;
     });
   }
 }

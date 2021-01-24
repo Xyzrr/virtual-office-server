@@ -60,9 +60,9 @@ export class MainRoom extends Room<State> {
       this.state.setPlayerMovement(client.sessionId, data.dir, data.speed);
     });
 
-    let lastFrameTime = Date.now();
+    let lastFrameTime = Date.now() / 1000;
     setInterval(() => {
-      const now = Date.now();
+      const now = Date.now() / 1000;
       const delta = now - lastFrameTime;
       lastFrameTime = now;
 

@@ -61,7 +61,7 @@ export class MainRoom extends Room<State> {
     });
 
     let lastFrameTime = Date.now();
-    window.setInterval(() => {
+    setInterval(() => {
       const now = Date.now();
       const delta = now - lastFrameTime;
       lastFrameTime = now;

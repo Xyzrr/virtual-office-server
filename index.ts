@@ -115,12 +115,13 @@ app.get("/token", (req, res) => {
   res.send(accessToken.toJwt());
   console.log(`issued token for ${identity} in room ${roomName}`);
 });
-app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+// app.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
 const gameServer = new Server({
   server: createServer(app),
+  express: app,
 });
 
 gameServer.define("main", MainRoom).enableRealtimeListing();
 
-gameServer.listen(3434);
+gameServer.listen(Number(PORT));

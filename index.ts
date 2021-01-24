@@ -96,4 +96,4 @@ const gameServer = new Server({
 
 gameServer.define("main", MainRoom).enableRealtimeListing();
 
-gameServer.listen(Number(process.env.port) || 3000);
+gameServer.listen(Number(process.env.PORT) || 3000);

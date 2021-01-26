@@ -4,11 +4,22 @@ import path from "path";
 import { Room, Client, Server } from "colyseus";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 import { createServer } from "http";
-import twilio from "twilio";
+import twilio, { Twilio } from "twilio";
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
+
+const ACCOUNT_SID = "AC38ede87c7601fb1e80347d0fb358965f";
+const API_KEY_SID = "SKb1583de43dafe4f8076f477383342990";
+const API_KEY_SECRET = "i4BcXHV8nAB1Vxn1kguNOsa5vpaMhK50";
+
+const twilioClient = new Twilio(API_KEY_SID, API_KEY_SECRET, {
+  accountSid: ACCOUNT_SID,
+});
 
 export class Player extends Schema {
+  @type("string")
+  identity = "";
+
   @type("number")
   x = Math.floor(Math.random() * 400);
 
@@ -41,10 +52,35 @@ export class State extends Schema {
     player.speed = speed;
   }
 
+  setPlayerIdentity(sessionId: string, identity: string) {
+    const player = this.players.get(sessionId);
+    player.identity = identity;
+  }
+
   update(delta: number) {
     this.players.forEach((player) => {
       player.x += player.speed * Math.cos(player.dir) * delta;
       player.y -= player.speed * Math.sin(player.dir) * delta;
+
+      if (player.identity !== "") {
+        const nearbyPlayers: Player[] = [];
+        this.players.forEach((p) => {
+          if (p.identity !== player.identity && p.x * p.x + p.y * p.y < 1000) {
+            nearbyPlayers.push(p);
+          }
+        });
+
+        const rules = nearbyPlayers.map((p) => {
+          return [{ type: "include", publisher: p.identity }];
+        });
+
+        twilioClient.video
+          .rooms("cool-room")
+          .participants.get(player.identity)
+          .subscribeRules.update({
+            rules,
+          });
+      }
     });
   }
 }
@@ -60,6 +96,10 @@ export class MainRoom extends Room<State> {
     this.onMessage("setMovement", (client, data) => {
       console.log("received message from ", client.sessionId, ":", data);
       this.state.setPlayerMovement(client.sessionId, data.dir, data.speed);
+    });
+
+    this.onMessage("setIdentity", (client, data) => {
+      this.state.setPlayerIdentity(client.sessionId, data);
     });
 
     let lastFrameTime = Date.now() / 1000;
@@ -93,9 +133,6 @@ const app = express();
 app.use(express.json());
 app.get("/token", (req, res) => {
   const { identity, roomName } = req.query;
-  const ACCOUNT_SID = "AC38ede87c7601fb1e80347d0fb358965f";
-  const API_KEY_SID = "SKb1583de43dafe4f8076f477383342990";
-  const API_KEY_SECRET = "i4BcXHV8nAB1Vxn1kguNOsa5vpaMhK50";
 
   const MAX_ALLOWED_SESSION_DURATION = 14400;
 
@@ -115,7 +152,6 @@ app.get("/token", (req, res) => {
   res.send(accessToken.toJwt());
   console.log(`issued token for ${identity} in room ${roomName}`);
 });
-// app.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
 const gameServer = new Server({
   server: createServer(app),

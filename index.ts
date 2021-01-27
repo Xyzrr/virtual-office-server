@@ -62,15 +62,19 @@ export class State extends Schema {
   }
 
   update(delta: number) {
+    const updateRules = lastFrameTime - lastRulesUpdateTime > 1;
+
+    if (updateRules) {
+      lastRulesUpdateTime = lastFrameTime;
+    }
+
     this.players.forEach((player) => {
       player.x += player.speed * Math.cos(player.dir) * delta;
       player.y -= player.speed * Math.sin(player.dir) * delta;
 
-      if (lastFrameTime - lastRulesUpdateTime < 1) {
+      if (!updateRules) {
         return;
       }
-
-      lastRulesUpdateTime = lastFrameTime;
 
       if (player.identity === "") {
         return;
@@ -90,10 +94,7 @@ export class State extends Schema {
 
         console.log("distanceSquared", distanceSquared);
 
-        if (
-          p.identity !== player.identity &&
-          distanceSquared < maxDistance ** 2
-        ) {
+        if (distanceSquared < maxDistance ** 2) {
           nearbyPlayers.push(p);
         }
       });
@@ -106,7 +107,7 @@ export class State extends Schema {
         rules.push({ type: "exclude", all: true });
       }
 
-      console.log("rules", rules);
+      console.log("rules", player.identity, rules);
 
       twilioClient.video
         .rooms("cool-room")

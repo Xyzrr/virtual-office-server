@@ -62,6 +62,8 @@ export class State extends Schema {
   }
 
   update(delta: number) {
+    console.log("Updating");
+
     const updateRules = lastFrameTime - lastRulesUpdateTime > 1;
 
     if (updateRules) {
@@ -90,7 +92,7 @@ export class State extends Schema {
         const dy = p.y - player.y;
 
         const distanceSquared = dx ** 2 + dy ** 2;
-        const maxDistance = 100;
+        const maxDistance = 200;
 
         console.log("distanceSquared", distanceSquared);
 

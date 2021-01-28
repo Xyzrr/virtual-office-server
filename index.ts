@@ -62,7 +62,7 @@ export class State extends Schema {
   }
 
   update(delta: number) {
-    console.log("Updating");
+    console.log("Updating", this.players.size, "players");
 
     const updateRules = lastFrameTime - lastRulesUpdateTime > 1;
 

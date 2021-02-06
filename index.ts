@@ -50,9 +50,19 @@ export class State extends Schema {
     this.players.delete(sessionId);
   }
 
-  setPlayerMovement(sessionId: string, dir: number, speed: number) {
+  setPlayerPosition(sessionId: string, x: number, y: number) {
+    const player = this.players.get(sessionId);
+    player.x = x;
+    player.y = y;
+  }
+
+  setPlayerDirection(sessionId: string, dir: number) {
     const player = this.players.get(sessionId);
     player.dir = dir;
+  }
+
+  setPlayerSpeed(sessionId: string, speed: number) {
+    const player = this.players.get(sessionId);
     player.speed = speed;
   }
 
@@ -60,100 +70,82 @@ export class State extends Schema {
     const player = this.players.get(sessionId);
     player.identity = identity;
   }
-
-  update(delta: number) {
-    console.log("Updating", this.players.size, "players");
-
-    const updateRules = lastFrameTime - lastRulesUpdateTime > 1;
-
-    if (updateRules) {
-      lastRulesUpdateTime = lastFrameTime;
-    }
-
-    this.players.forEach((player) => {
-      player.x += player.speed * Math.cos(player.dir) * delta;
-      player.y -= player.speed * Math.sin(player.dir) * delta;
-
-      if (!updateRules) {
-        return;
-      }
-
-      if (player.identity === "") {
-        return;
-      }
-
-      const nearbyPlayers: Player[] = [];
-      this.players.forEach((p) => {
-        if (p === player || p.identity === "") {
-          return;
-        }
-
-        const dx = p.x - player.x;
-        const dy = p.y - player.y;
-
-        const distanceSquared = dx ** 2 + dy ** 2;
-        const maxDistance = 200;
-
-        console.log("distanceSquared", distanceSquared);
-
-        if (distanceSquared < maxDistance ** 2) {
-          nearbyPlayers.push(p);
-        }
-      });
-
-      const rules: any[] = nearbyPlayers.map((p) => {
-        return { type: "include", publisher: p.identity };
-      });
-
-      if (rules.length === 0) {
-        rules.push({ type: "exclude", all: true });
-      }
-
-      console.log("rules", player.identity, rules);
-
-      twilioClient.video
-        .rooms("cool-room")
-        .participants.get(player.identity)
-        .subscribeRules.update({
-          rules,
-        })
-        .then((result) => {
-          console.log("Subscribe Rules updated successfully", result);
-        })
-        .catch((error) => {
-          console.log("Error updating rules", error);
-        });
-    });
-  }
 }
 
 export class MainRoom extends Room<State> {
   maxClients = 4;
+  interval: any = undefined;
 
   onCreate(options: any) {
     console.log("room created", options);
 
     this.setState(new State());
 
-    this.onMessage("setMovement", (client, data) => {
-      console.log("received message from ", client.sessionId, ":", data);
-      this.state.setPlayerMovement(client.sessionId, data.dir, data.speed);
+    this.onMessage("setPlayerDirection", (client, dir) => {
+      this.state.setPlayerDirection(client.sessionId, dir);
+    });
+
+    this.onMessage("setPlayerSpeed", (client, speed) => {
+      this.state.setPlayerSpeed(client.sessionId, speed);
+    });
+
+    this.onMessage("setPlayerPosition", (client, position) => {
+      this.state.setPlayerPosition(client.sessionId, position.x, position.y);
     });
 
     this.onMessage("setIdentity", (client, data) => {
       this.state.setPlayerIdentity(client.sessionId, data);
     });
 
-    lastFrameTime = Date.now() / 1000;
-    lastRulesUpdateTime = lastFrameTime;
+    this.interval = setInterval(() => {
+      this.state.players.forEach((player) => {
+        if (player.identity === "") {
+          return;
+        }
 
-    setInterval(() => {
-      const now = Date.now() / 1000;
-      const delta = now - lastFrameTime;
-      lastFrameTime = now;
+        const nearbyPlayers: Player[] = [];
+        this.state.players.forEach((p) => {
+          if (p === player || p.identity === "") {
+            return;
+          }
 
-      this.state.update(delta);
-    }, 17);
+          const dx = p.x - player.x;
+          const dy = p.y - player.y;
+
+          const distanceSquared = dx ** 2 + dy ** 2;
+          const maxDistance = 200;
+
+          console.log("distanceSquared", distanceSquared);
+
+          if (distanceSquared < maxDistance ** 2) {
+            nearbyPlayers.push(p);
+          }
+        });
+
+        const rules: any[] = nearbyPlayers.map((p) => {
+          return { type: "include", publisher: p.identity };
+        });
+
+        if (rules.length === 0) {
+          rules.push({ type: "exclude", all: true });
+        }
+
+        console.log("rules", player.identity, rules);
+
+        twilioClient.video
+          .rooms("cool-room")
+          .participants.get(player.identity)
+          .subscribeRules.update({
+            rules,
+          })
+          .then((result) => {
+            console.log("Subscribe Rules updated successfully", result);
+          })
+          .catch((error) => {
+            console.log("Error updating rules", error);
+          });
+      });
+    }, 1000);
   }
 
   onAuth(client: any, options: any, req: any) {
@@ -169,6 +161,7 @@ export class MainRoom extends Room<State> {
   }
 
   onDispose() {
+    clearInterval(this.interval);
     console.log("dispose");
   }
 }

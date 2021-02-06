@@ -107,12 +107,10 @@ export class MainRoom extends Room<State> {
           const dx = p.x - player.x;
           const dy = p.y - player.y;
 
-          const distanceSquared = dx ** 2 + dy ** 2;
-          const maxDistance = 200;
+          const distance = Math.sqrt(dx ** 2 + dy ** 2);
+          const maxDistance = 250;
 
-          console.log("distanceSquared", distanceSquared);
-
-          if (distanceSquared < maxDistance ** 2) {
+          if (distance < maxDistance) {
             nearbyPlayers.push(p);
           }
         });

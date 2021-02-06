@@ -1,11 +1,9 @@
 import express from "express";
-import path from "path";
 
 import { Room, Client, Server } from "colyseus";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 import { createServer } from "http";
 import twilio, { Twilio } from "twilio";
-import { SubscribeRulesListInstanceUpdateOptions } from "twilio/lib/rest/video/v1/room/roomParticipant/roomParticipantSubscribeRule";
 
 const PORT = process.env.PORT || 5000;
 
@@ -16,9 +14,6 @@ const API_KEY_SECRET = "i4BcXHV8nAB1Vxn1kguNOsa5vpaMhK50";
 const twilioClient = new Twilio(API_KEY_SID, API_KEY_SECRET, {
   accountSid: ACCOUNT_SID,
 });
-
-let lastRulesUpdateTime = 0;
-let lastFrameTime = 0;
 
 export class Player extends Schema {
   @type("string")

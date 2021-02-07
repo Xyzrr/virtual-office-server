@@ -4,6 +4,7 @@ import { Room, Client, Server } from "colyseus";
 import { Schema, type, MapSchema, SetSchema } from "@colyseus/schema";
 import { createServer } from "http";
 import twilio, { Twilio } from "twilio";
+import * as _ from "lodash";
 
 const PORT = process.env.PORT || 5000;
 
@@ -18,6 +19,9 @@ const twilioClient = new Twilio(API_KEY_SID, API_KEY_SECRET, {
 export class Player extends Schema {
   @type("string")
   identity = "";
+
+  @type("number")
+  color = _.sample([0xffffff, 0xcdf6d1, 0xfc7150, 0x50dcfd, 0xf66760]);
 
   @type("number")
   x = Math.floor(Math.random() * 16);

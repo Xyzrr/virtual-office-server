@@ -1,7 +1,7 @@
 import express from "express";
 
 import { Room, Client, Server } from "colyseus";
-import { Schema, type, MapSchema } from "@colyseus/schema";
+import { Schema, type, MapSchema, SetSchema } from "@colyseus/schema";
 import { createServer } from "http";
 import twilio, { Twilio } from "twilio";
 
@@ -20,10 +20,10 @@ export class Player extends Schema {
   identity = "";
 
   @type("number")
-  x = Math.floor(Math.random() * 400);
+  x = Math.floor(Math.random() * 16);
 
   @type("number")
-  y = Math.floor(Math.random() * 400);
+  y = Math.floor(Math.random() * 16);
 
   @type("number")
   dir = 0;
@@ -32,16 +32,42 @@ export class Player extends Schema {
   speed = 0;
 }
 
+export class WorldObject extends Schema {
+  constructor(type: string, x: number, y: number) {
+    super();
+    this.type = type;
+    this.x = x;
+    this.y = y;
+  }
+
+  @type("string")
+  type: string;
+
+  @type("number")
+  x: number;
+
+  @type("number")
+  y: number;
+}
+
 export class State extends Schema {
   @type({ map: Player })
   players = new MapSchema<Player>();
 
+  @type({ set: WorldObject })
+  worldObjects = new SetSchema<WorldObject>();
+
+  addWorldObject(worldObject: WorldObject) {
+    this.worldObjects.add(worldObject);
+  }
+
   createPlayer(sessionId: string) {
+    console.log("Creating player:", sessionId);
     this.players.set(sessionId, new Player());
   }
 
   removePlayer(sessionId: string) {
-    console.log("removing player", sessionId);
+    console.log("Removing player:", sessionId);
     this.players.delete(sessionId);
   }
 
@@ -71,10 +97,21 @@ export class MainRoom extends Room<State> {
   maxClients = 4;
   interval: any = undefined;
 
+  initWorld() {
+    for (let i = 0; i < 16; i++) {
+      for (let j = 0; j < 16; j++) {
+        const dot = new WorldObject("dot", i, j);
+        this.state.addWorldObject(dot);
+      }
+    }
+  }
+
   onCreate(options: any) {
     console.log("room created", options);
 
     this.setState(new State());
+
+    this.initWorld();
 
     this.onMessage("setPlayerDirection", (client, dir) => {
       this.state.setPlayerDirection(client.sessionId, dir);
@@ -108,7 +145,7 @@ export class MainRoom extends Room<State> {
           const dy = p.y - player.y;
 
           const distance = Math.sqrt(dx ** 2 + dy ** 2);
-          const maxDistance = 250;
+          const maxDistance = 10;
 
           if (distance < maxDistance) {
             nearbyPlayers.push(p);

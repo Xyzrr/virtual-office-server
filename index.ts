@@ -129,7 +129,7 @@ export class MainRoom extends Room<State> {
       this.state.setPlayerPosition(client.sessionId, position.x, position.y);
     });
 
-    this.onMessage("setIdentity", (client, data) => {
+    this.onMessage("setPlayerIdentity", (client, data) => {
       this.state.setPlayerIdentity(client.sessionId, data);
     });
 

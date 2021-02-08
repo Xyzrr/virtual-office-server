@@ -17,8 +17,13 @@ const twilioClient = new Twilio(API_KEY_SID, API_KEY_SECRET, {
 });
 
 export class Player extends Schema {
+  constructor(identity: string) {
+    super();
+    this.identity = identity;
+  }
+
   @type("string")
-  identity = "";
+  identity: string;
 
   @type("number")
   color = _.sample([0xffffff, 0xcdf6d1, 0xfc7150, 0x50dcfd, 0xf66760]);
@@ -65,9 +70,9 @@ export class State extends Schema {
     this.worldObjects.add(worldObject);
   }
 
-  createPlayer(sessionId: string) {
+  createPlayer(sessionId: string, identity: string) {
     console.log("Creating player:", sessionId);
-    this.players.set(sessionId, new Player());
+    this.players.set(sessionId, new Player(identity));
   }
 
   removePlayer(sessionId: string) {
@@ -129,19 +134,11 @@ export class MainRoom extends Room<State> {
       this.state.setPlayerPosition(client.sessionId, position.x, position.y);
     });
 
-    this.onMessage("setPlayerIdentity", (client, data) => {
-      this.state.setPlayerIdentity(client.sessionId, data);
-    });
-
     this.interval = setInterval(() => {
       this.state.players.forEach((player) => {
-        if (player.identity === "") {
-          return;
-        }
-
         const nearbyPlayers: Player[] = [];
         this.state.players.forEach((p) => {
-          if (p === player || p.identity === "") {
+          if (p === player) {
             return;
           }
 
@@ -186,8 +183,8 @@ export class MainRoom extends Room<State> {
     return true;
   }
 
-  onJoin(client: Client) {
-    this.state.createPlayer(client.sessionId);
+  onJoin(client: Client, options: any) {
+    this.state.createPlayer(client.sessionId, options.identity);
   }
 
   onLeave(client: Client) {

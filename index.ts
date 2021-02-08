@@ -17,9 +17,10 @@ const twilioClient = new Twilio(API_KEY_SID, API_KEY_SECRET, {
 });
 
 export class Player extends Schema {
-  constructor(identity: string) {
+  constructor(identity: string, audioEnabled: boolean) {
     super();
     this.identity = identity;
+    this.audioEnabled = audioEnabled;
   }
 
   @type("string")
@@ -39,6 +40,9 @@ export class Player extends Schema {
 
   @type("number")
   speed = 0;
+
+  @type("boolean")
+  audioEnabled: boolean;
 }
 
 export class WorldObject extends Schema {
@@ -70,9 +74,9 @@ export class State extends Schema {
     this.worldObjects.add(worldObject);
   }
 
-  createPlayer(sessionId: string, identity: string) {
+  createPlayer(sessionId: string, identity: string, audioEnabled: boolean) {
     console.log("Creating player:", sessionId);
-    this.players.set(sessionId, new Player(identity));
+    this.players.set(sessionId, new Player(identity, audioEnabled));
   }
 
   removePlayer(sessionId: string) {
@@ -96,9 +100,9 @@ export class State extends Schema {
     player.speed = speed;
   }
 
-  setPlayerIdentity(sessionId: string, identity: string) {
+  setPlayerAudioEnabled(sessionId: string, audioEnabled: boolean) {
     const player = this.players.get(sessionId);
-    player.identity = identity;
+    player.audioEnabled = audioEnabled;
   }
 }
 
@@ -132,6 +136,10 @@ export class MainRoom extends Room<State> {
 
     this.onMessage("setPlayerPosition", (client, position) => {
       this.state.setPlayerPosition(client.sessionId, position.x, position.y);
+    });
+
+    this.onMessage("setPlayerAudioEnabled", (client, audioEnabled) => {
+      this.state.setPlayerAudioEnabled(client.sessionId, audioEnabled);
     });
 
     this.interval = setInterval(() => {
@@ -184,7 +192,11 @@ export class MainRoom extends Room<State> {
   }
 
   onJoin(client: Client, options: any) {
-    this.state.createPlayer(client.sessionId, options.identity);
+    this.state.createPlayer(
+      client.sessionId,
+      options.identity,
+      options.audioEnabled
+    );
   }
 
   onLeave(client: Client) {

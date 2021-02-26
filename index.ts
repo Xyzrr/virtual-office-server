@@ -63,12 +63,29 @@ export class WorldObject extends Schema {
   y: number;
 }
 
+export class Cursor extends Schema {
+  @type("number")
+  x: number;
+
+  @type("number")
+  y: number;
+
+  @type("string")
+  cursorOwnerIdentity: string;
+
+  @type("string")
+  screenOwnerIdentity: string;
+}
+
 export class State extends Schema {
   @type({ map: Player })
   players = new MapSchema<Player>();
 
   @type({ set: WorldObject })
   worldObjects = new SetSchema<WorldObject>();
+
+  @type({ set: Cursor })
+  cursors = new SetSchema<Cursor>();
 
   addWorldObject(worldObject: WorldObject) {
     this.worldObjects.add(worldObject);

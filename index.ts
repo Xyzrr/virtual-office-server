@@ -16,15 +16,13 @@ const twilioClient = new Twilio(API_KEY_SID, API_KEY_SECRET, {
   accountSid: ACCOUNT_SID,
 });
 
+const sessionIdToIdentity = new Map<string, string>();
+
 export class Player extends Schema {
-  constructor(identity: string, audioEnabled: boolean) {
+  constructor(audioEnabled: boolean) {
     super();
-    this.identity = identity;
     this.audioEnabled = audioEnabled;
   }
-
-  @type("string")
-  identity: string;
 
   @type("number")
   color = _.sample([0xffffff, 0xcdf6d1, 0xfc7150, 0x50dcfd, 0xf66760]);
@@ -91,34 +89,34 @@ export class State extends Schema {
     this.worldObjects.add(worldObject);
   }
 
-  createPlayer(sessionId: string, identity: string, audioEnabled: boolean) {
-    console.log("Creating player:", sessionId);
-    this.players.set(sessionId, new Player(identity, audioEnabled));
+  createPlayer(identity: string, audioEnabled: boolean) {
+    console.log("Creating player:", identity);
+    this.players.set(identity, new Player(audioEnabled));
   }
 
-  removePlayer(sessionId: string) {
-    console.log("Removing player:", sessionId);
-    this.players.delete(sessionId);
+  removePlayer(identity: string) {
+    console.log("Removing player:", identity);
+    this.players.delete(identity);
   }
 
-  setPlayerPosition(sessionId: string, x: number, y: number) {
-    const player = this.players.get(sessionId);
+  setPlayerPosition(identity: string, x: number, y: number) {
+    const player = this.players.get(identity);
     player.x = x;
     player.y = y;
   }
 
-  setPlayerDirection(sessionId: string, dir: number) {
-    const player = this.players.get(sessionId);
+  setPlayerDirection(identity: string, dir: number) {
+    const player = this.players.get(identity);
     player.dir = dir;
   }
 
-  setPlayerSpeed(sessionId: string, speed: number) {
-    const player = this.players.get(sessionId);
+  setPlayerSpeed(identity: string, speed: number) {
+    const player = this.players.get(identity);
     player.speed = speed;
   }
 
-  setPlayerAudioEnabled(sessionId: string, audioEnabled: boolean) {
-    const player = this.players.get(sessionId);
+  setPlayerAudioEnabled(identity: string, audioEnabled: boolean) {
+    const player = this.players.get(identity);
     player.audioEnabled = audioEnabled;
   }
 }
@@ -144,26 +142,31 @@ export class MainRoom extends Room<State> {
     this.initWorld();
 
     this.onMessage("setPlayerDirection", (client, dir) => {
-      this.state.setPlayerDirection(client.sessionId, dir);
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      this.state.setPlayerDirection(identity, dir);
     });
 
     this.onMessage("setPlayerSpeed", (client, speed) => {
-      this.state.setPlayerSpeed(client.sessionId, speed);
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      this.state.setPlayerSpeed(identity, speed);
     });
 
     this.onMessage("setPlayerPosition", (client, position) => {
-      this.state.setPlayerPosition(client.sessionId, position.x, position.y);
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      this.state.setPlayerPosition(identity, position.x, position.y);
     });
 
     this.onMessage("setPlayerAudioEnabled", (client, audioEnabled) => {
-      this.state.setPlayerAudioEnabled(client.sessionId, audioEnabled);
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      this.state.setPlayerAudioEnabled(identity, audioEnabled);
     });
 
     this.onMessage("setCursorPosition", (client, cursorData) => {
-      const { x, y, cursorOwnerIdentity, screenOwnerIdentity } = cursorData;
+      const { x, y, screenOwnerIdentity } = cursorData;
+      const identity = sessionIdToIdentity.get(client.sessionId);
 
       for (const cursor of this.state.cursors.values()) {
-        if (cursor.cursorOwnerIdentity === cursorOwnerIdentity) {
+        if (cursor.cursorOwnerIdentity === identity) {
           cursor.x = x;
           cursor.y = y;
           cursor.screenOwnerIdentity = screenOwnerIdentity;
@@ -171,12 +174,13 @@ export class MainRoom extends Room<State> {
         }
       }
 
-      this.state.cursors.add(cursorData);
+      this.state.cursors.add({ ...cursorData, cursorOwnerIdentity: identity });
     });
 
-    this.onMessage("removeCursor", (client, cursorOwnerIdentity) => {
+    this.onMessage("removeCursor", (client) => {
+      const identity = sessionIdToIdentity.get(client.sessionId);
       for (const cursor of this.state.cursors.values()) {
-        if (cursor.cursorOwnerIdentity === cursorOwnerIdentity) {
+        if (cursor.cursorOwnerIdentity === identity) {
           this.state.cursors.delete(cursor);
           return;
         }
@@ -184,9 +188,9 @@ export class MainRoom extends Room<State> {
     });
 
     this.interval = setInterval(() => {
-      this.state.players.forEach((player) => {
-        const nearbyPlayers: Player[] = [];
-        this.state.players.forEach((p) => {
+      for (const [identity, player] of this.state.players.entries()) {
+        const nearbyPlayers: { [id: string]: Player } = {};
+        for (const [id, p] of this.state.players.entries()) {
           if (p === player) {
             return;
           }
@@ -198,23 +202,23 @@ export class MainRoom extends Room<State> {
           const maxDistance = 10;
 
           if (distance < maxDistance) {
-            nearbyPlayers.push(p);
+            nearbyPlayers[id] = p;
           }
-        });
+        }
 
-        const rules: any[] = nearbyPlayers.map((p) => {
-          return { type: "include", publisher: p.identity };
+        const rules: any[] = Object.entries(nearbyPlayers).map(([id, p]) => {
+          return { type: "include", publisher: id };
         });
 
         if (rules.length === 0) {
           rules.push({ type: "exclude", all: true });
         }
 
-        console.log("rules", player.identity, rules);
+        console.log("rules", identity, rules);
 
         twilioClient.video
           .rooms("cool-room")
-          .participants.get(player.identity)
+          .participants.get(identity)
           .subscribeRules.update({
             rules,
           })
@@ -224,7 +228,7 @@ export class MainRoom extends Room<State> {
           .catch((error) => {
             console.log("Error updating rules", error);
           });
-      });
+      }
     }, 1000);
   }
 
@@ -233,15 +237,13 @@ export class MainRoom extends Room<State> {
   }
 
   onJoin(client: Client, options: any) {
-    this.state.createPlayer(
-      client.sessionId,
-      options.identity,
-      options.audioEnabled
-    );
+    sessionIdToIdentity.set(client.sessionId, options.identity);
+    this.state.createPlayer(options.identity, options.audioEnabled);
   }
 
   onLeave(client: Client) {
     this.state.removePlayer(client.sessionId);
+    sessionIdToIdentity.delete(client.sessionId);
   }
 
   onDispose() {

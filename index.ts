@@ -159,6 +159,30 @@ export class MainRoom extends Room<State> {
       this.state.setPlayerAudioEnabled(client.sessionId, audioEnabled);
     });
 
+    this.onMessage("setCursorPosition", (client, cursorData) => {
+      const { x, y, cursorOwnerIdentity, screenOwnerIdentity } = cursorData;
+
+      for (const cursor of this.state.cursors.values()) {
+        if (cursor.cursorOwnerIdentity === cursorOwnerIdentity) {
+          cursor.x = x;
+          cursor.y = y;
+          cursor.screenOwnerIdentity = screenOwnerIdentity;
+          return;
+        }
+      }
+
+      this.state.cursors.add(cursorData);
+    });
+
+    this.onMessage("removeCursor", (client, cursorOwnerIdentity) => {
+      for (const cursor of this.state.cursors.values()) {
+        if (cursor.cursorOwnerIdentity === cursorOwnerIdentity) {
+          this.state.cursors.delete(cursor);
+          return;
+        }
+      }
+    });
+
     this.interval = setInterval(() => {
       this.state.players.forEach((player) => {
         const nearbyPlayers: Player[] = [];

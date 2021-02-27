@@ -242,7 +242,8 @@ export class MainRoom extends Room<State> {
   }
 
   onLeave(client: Client) {
-    this.state.removePlayer(client.sessionId);
+    const identity = sessionIdToIdentity.get(client.sessionId);
+    this.state.removePlayer(identity);
     sessionIdToIdentity.delete(client.sessionId);
   }
 

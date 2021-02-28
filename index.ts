@@ -25,7 +25,28 @@ export class Player extends Schema {
   }
 
   @type("number")
-  color = _.sample([0xffffff, 0xcdf6d1, 0xfc7150, 0x50dcfd, 0xf66760]);
+  color = _.sample([
+    0xe6194b,
+    0x3cb44b,
+    0xffe119,
+    0x4363d8,
+    0xf58231,
+    0x911eb4,
+    0x46f0f0,
+    0xf032e6,
+    0xbcf60c,
+    0xfabebe,
+    0x008080,
+    0xe6beff,
+    0x9a6324,
+    0xfffac8,
+    0x800000,
+    0xaaffc3,
+    0x808000,
+    0xffd8b1,
+    0x000075,
+    0x808080,
+  ]);
 
   @type("number")
   x = Math.floor(Math.random() * 16);
@@ -62,6 +83,19 @@ export class WorldObject extends Schema {
 }
 
 export class Cursor extends Schema {
+  constructor(
+    cursorOwnerIdentity: string,
+    screenOwnerIdentity: string,
+    x: number,
+    y: number
+  ) {
+    super();
+    this.cursorOwnerIdentity = cursorOwnerIdentity;
+    this.screenOwnerIdentity = screenOwnerIdentity;
+    this.x = x;
+    this.y = y;
+  }
+
   @type("number")
   x: number;
 
@@ -164,6 +198,7 @@ export class MainRoom extends Room<State> {
     this.onMessage("setCursorPosition", (client, cursorData) => {
       const { x, y, screenOwnerIdentity } = cursorData;
       const identity = sessionIdToIdentity.get(client.sessionId);
+      console.log("cursor position", cursorData);
 
       for (const cursor of this.state.cursors.values()) {
         if (cursor.cursorOwnerIdentity === identity) {
@@ -174,7 +209,14 @@ export class MainRoom extends Room<State> {
         }
       }
 
-      this.state.cursors.add({ ...cursorData, cursorOwnerIdentity: identity });
+      this.state.cursors.add(
+        new Cursor(
+          identity,
+          cursorData.screenOwnerIdentity,
+          cursorData.x,
+          cursorData.y
+        )
+      );
     });
 
     this.onMessage("removeCursor", (client) => {
@@ -185,6 +227,19 @@ export class MainRoom extends Room<State> {
           return;
         }
       }
+    });
+
+    this.onMessage("cursorMouseDown", (client, cursorData) => {
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      this.broadcast(
+        "cursorMouseDown",
+        new Cursor(
+          identity,
+          cursorData.screenOwnerIdentity,
+          cursorData.x,
+          cursorData.y
+        )
+      );
     });
 
     this.interval = setInterval(() => {

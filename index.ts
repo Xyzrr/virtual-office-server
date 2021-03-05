@@ -3,20 +3,22 @@ import express from "express";
 import { Room, Client, Server } from "colyseus";
 import { Schema, type, MapSchema, SetSchema } from "@colyseus/schema";
 import { createServer } from "http";
-import twilio, { Twilio } from "twilio";
 import * as _ from "lodash";
 
 const PORT = process.env.PORT || 5000;
 
-const ACCOUNT_SID = "AC38ede87c7601fb1e80347d0fb358965f";
-const API_KEY_SID = "SKb1583de43dafe4f8076f477383342990";
-const API_KEY_SECRET = "i4BcXHV8nAB1Vxn1kguNOsa5vpaMhK50";
-
-const twilioClient = new Twilio(API_KEY_SID, API_KEY_SECRET, {
-  accountSid: ACCOUNT_SID,
-});
-
 const sessionIdToIdentity = new Map<string, string>();
+
+export class SharedApp extends Schema {
+  @type("string")
+  title = "";
+
+  @type("string")
+  name = "";
+
+  @type("string")
+  url = "";
+}
 
 export class Player extends Schema {
   constructor(audioEnabled: boolean) {
@@ -62,6 +64,9 @@ export class Player extends Schema {
 
   @type("boolean")
   audioEnabled: boolean;
+
+  @type(SharedApp)
+  sharedApp: SharedApp;
 }
 
 export class WorldObject extends Schema {
@@ -157,7 +162,6 @@ export class State extends Schema {
 
 export class MainRoom extends Room<State> {
   maxClients = 4;
-  interval: any = undefined;
 
   initWorld() {
     for (let i = 0; i < 16; i++) {
@@ -242,49 +246,14 @@ export class MainRoom extends Room<State> {
       );
     });
 
-    this.interval = setInterval(() => {
-      for (const [identity, player] of this.state.players.entries()) {
-        const nearbyPlayers: { [id: string]: Player } = {};
-        for (const [id, p] of this.state.players.entries()) {
-          if (p === player) {
-            return;
-          }
-
-          const dx = p.x - player.x;
-          const dy = p.y - player.y;
-
-          const distance = Math.sqrt(dx ** 2 + dy ** 2);
-          const maxDistance = 10;
-
-          if (distance < maxDistance) {
-            nearbyPlayers[id] = p;
-          }
-        }
-
-        const rules: any[] = Object.entries(nearbyPlayers).map(([id, p]) => {
-          return { type: "include", publisher: id };
-        });
-
-        if (rules.length === 0) {
-          rules.push({ type: "exclude", all: true });
-        }
-
-        console.log("rules", identity, rules);
-
-        twilioClient.video
-          .rooms("cool-room")
-          .participants.get(identity)
-          .subscribeRules.update({
-            rules,
-          })
-          .then((result) => {
-            console.log("Subscribe Rules updated successfully", result);
-          })
-          .catch((error) => {
-            console.log("Error updating rules", error);
-          });
-      }
-    }, 1000);
+    this.onMessage("appInfo", (client, appInfo) => {
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      const sharedApp = new SharedApp();
+      sharedApp.name = appInfo.name;
+      sharedApp.title = appInfo.title;
+      sharedApp.url = appInfo.url;
+      this.state.players.get(identity).sharedApp = sharedApp;
+    });
   }
 
   onAuth(client: any, options: any, req: any) {
@@ -303,34 +272,12 @@ export class MainRoom extends Room<State> {
   }
 
   onDispose() {
-    clearInterval(this.interval);
     console.log("dispose");
   }
 }
 
 const app = express();
 app.use(express.json());
-app.get("/token", (req, res) => {
-  const { identity, roomName } = req.query;
-
-  const MAX_ALLOWED_SESSION_DURATION = 14400;
-
-  const accessToken = new twilio.jwt.AccessToken(
-    ACCOUNT_SID,
-    API_KEY_SID,
-    API_KEY_SECRET,
-    {
-      ttl: MAX_ALLOWED_SESSION_DURATION,
-    }
-  );
-  (accessToken as any).identity = identity;
-  const grant = new twilio.jwt.AccessToken.VideoGrant();
-  (grant as any).room = roomName;
-  accessToken.addGrant(grant);
-
-  res.send(accessToken.toJwt());
-  console.log(`issued token for ${identity} in room ${roomName}`);
-});
 
 const gameServer = new Server({
   server: createServer(app),

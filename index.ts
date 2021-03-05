@@ -135,6 +135,13 @@ export class State extends Schema {
 
   removePlayer(identity: string) {
     console.log("Removing player:", identity);
+
+    this.cursors.forEach((c) => {
+      if (c.cursorOwnerIdentity === identity) {
+        this.cursors.delete(c);
+      }
+    });
+
     this.players.delete(identity);
   }
 

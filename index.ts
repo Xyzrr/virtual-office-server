@@ -21,9 +21,10 @@ export class SharedApp extends Schema {
 }
 
 export class Player extends Schema {
-  constructor(audioOn: boolean, videoOn: boolean) {
+  constructor(audioInputOn: boolean, videoInputOn: boolean) {
     super();
-    this.audioOn = audioOn;
+    this.audioInputOn = audioInputOn;
+    this.videoInputOn = videoInputOn;
   }
 
   @type("number")
@@ -63,10 +64,10 @@ export class Player extends Schema {
   speed = 0;
 
   @type("boolean")
-  audioOn: boolean;
+  audioInputOn: boolean;
 
   @type("boolean")
-  videoOn: boolean;
+  videoInputOn: boolean;
 
   @type("boolean")
   screenShareOn: boolean;
@@ -134,9 +135,9 @@ export class State extends Schema {
     this.worldObjects.add(worldObject);
   }
 
-  createPlayer(identity: string, audioOn: boolean, videoOn: boolean) {
+  createPlayer(identity: string, audioInputOn: boolean, videoInputOn: boolean) {
     console.log("Creating player:", identity);
-    this.players.set(identity, new Player(audioOn, videoOn));
+    this.players.set(identity, new Player(audioInputOn, videoInputOn));
   }
 
   removePlayer(identity: string) {
@@ -201,6 +202,7 @@ export class MainRoom extends Room<State> {
     });
 
     this.onMessage("updatePlayer", (client, attributes) => {
+      console.log("updating player", attributes);
       const identity = sessionIdToIdentity.get(client.sessionId);
       Object.assign(this.state.players.get(identity), attributes);
     });
@@ -268,7 +270,11 @@ export class MainRoom extends Room<State> {
 
   onJoin(client: Client, options: any) {
     sessionIdToIdentity.set(client.sessionId, options.identity);
-    this.state.createPlayer(options.identity, options.audioOn, options.videoOn);
+    this.state.createPlayer(
+      options.identity,
+      options.audioInputOn,
+      options.videoInputOn
+    );
   }
 
   onLeave(client: Client) {

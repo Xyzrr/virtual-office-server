@@ -21,9 +21,9 @@ export class SharedApp extends Schema {
 }
 
 export class Player extends Schema {
-  constructor(audioEnabled: boolean) {
+  constructor(audioOn: boolean, videoOn: boolean) {
     super();
-    this.audioEnabled = audioEnabled;
+    this.audioOn = audioOn;
   }
 
   @type("number")
@@ -63,7 +63,13 @@ export class Player extends Schema {
   speed = 0;
 
   @type("boolean")
-  audioEnabled: boolean;
+  audioOn: boolean;
+
+  @type("boolean")
+  videoOn: boolean;
+
+  @type("boolean")
+  screenShareOn: boolean;
 
   @type(SharedApp)
   sharedApp: SharedApp;
@@ -128,9 +134,9 @@ export class State extends Schema {
     this.worldObjects.add(worldObject);
   }
 
-  createPlayer(identity: string, audioEnabled: boolean) {
+  createPlayer(identity: string, audioOn: boolean, videoOn: boolean) {
     console.log("Creating player:", identity);
-    this.players.set(identity, new Player(audioEnabled));
+    this.players.set(identity, new Player(audioOn, videoOn));
   }
 
   removePlayer(identity: string) {
@@ -159,11 +165,6 @@ export class State extends Schema {
   setPlayerSpeed(identity: string, speed: number) {
     const player = this.players.get(identity);
     player.speed = speed;
-  }
-
-  setPlayerAudioEnabled(identity: string, audioEnabled: boolean) {
-    const player = this.players.get(identity);
-    player.audioEnabled = audioEnabled;
   }
 }
 
@@ -199,9 +200,9 @@ export class MainRoom extends Room<State> {
       this.state.setPlayerPosition(identity, position.x, position.y);
     });
 
-    this.onMessage("setPlayerAudioEnabled", (client, audioEnabled) => {
+    this.onMessage("updatePlayer", (client, attributes) => {
       const identity = sessionIdToIdentity.get(client.sessionId);
-      this.state.setPlayerAudioEnabled(identity, audioEnabled);
+      Object.assign(this.state.players.get(identity), attributes);
     });
 
     this.onMessage("setCursorPosition", (client, cursorData) => {
@@ -267,7 +268,7 @@ export class MainRoom extends Room<State> {
 
   onJoin(client: Client, options: any) {
     sessionIdToIdentity.set(client.sessionId, options.identity);
-    this.state.createPlayer(options.identity, options.audioEnabled);
+    this.state.createPlayer(options.identity, options.audioOn, options.videoOn);
   }
 
   onLeave(client: Client) {

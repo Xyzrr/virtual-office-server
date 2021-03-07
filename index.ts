@@ -20,6 +20,20 @@ export class SharedApp extends Schema {
   url = "";
 }
 
+export class Cursor extends Schema {
+  @type("number")
+  x: number;
+
+  @type("number")
+  y: number;
+
+  @type("string")
+  surfaceType: string;
+
+  @type("string")
+  surfaceId: string;
+}
+
 export class Player extends Schema {
   constructor(audioInputOn: boolean, videoInputOn: boolean) {
     super();
@@ -74,6 +88,9 @@ export class Player extends Schema {
 
   @type(SharedApp)
   sharedApp: SharedApp;
+
+  @type(Cursor)
+  cursor: Cursor;
 }
 
 export class WorldObject extends Schema {
@@ -94,42 +111,12 @@ export class WorldObject extends Schema {
   y: number;
 }
 
-export class Cursor extends Schema {
-  constructor(
-    cursorOwnerIdentity: string,
-    screenOwnerIdentity: string,
-    x: number,
-    y: number
-  ) {
-    super();
-    this.cursorOwnerIdentity = cursorOwnerIdentity;
-    this.screenOwnerIdentity = screenOwnerIdentity;
-    this.x = x;
-    this.y = y;
-  }
-
-  @type("number")
-  x: number;
-
-  @type("number")
-  y: number;
-
-  @type("string")
-  cursorOwnerIdentity: string;
-
-  @type("string")
-  screenOwnerIdentity: string;
-}
-
 export class State extends Schema {
   @type({ map: Player })
   players = new MapSchema<Player>();
 
   @type({ set: WorldObject })
   worldObjects = new SetSchema<WorldObject>();
-
-  @type({ set: Cursor })
-  cursors = new SetSchema<Cursor>();
 
   addWorldObject(worldObject: WorldObject) {
     this.worldObjects.add(worldObject);
@@ -142,13 +129,6 @@ export class State extends Schema {
 
   removePlayer(identity: string) {
     console.log("Removing player:", identity);
-
-    this.cursors.forEach((c) => {
-      if (c.cursorOwnerIdentity === identity) {
-        this.cursors.delete(c);
-      }
-    });
-
     this.players.delete(identity);
   }
 
@@ -207,51 +187,28 @@ export class MainRoom extends Room<State> {
       Object.assign(this.state.players.get(identity), attributes);
     });
 
-    this.onMessage("setCursorPosition", (client, cursorData) => {
-      const { x, y, screenOwnerIdentity } = cursorData;
+    this.onMessage("updatePlayerCursor", (client, cursorData) => {
+      console.log("updating curosr", cursorData);
       const identity = sessionIdToIdentity.get(client.sessionId);
-      console.log("cursor position", cursorData);
 
-      for (const cursor of this.state.cursors.values()) {
-        if (cursor.cursorOwnerIdentity === identity) {
-          cursor.x = x;
-          cursor.y = y;
-          cursor.screenOwnerIdentity = screenOwnerIdentity;
-          return;
-        }
-      }
-
-      this.state.cursors.add(
-        new Cursor(
-          identity,
-          cursorData.screenOwnerIdentity,
-          cursorData.x,
-          cursorData.y
-        )
-      );
-    });
-
-    this.onMessage("removeCursor", (client) => {
-      const identity = sessionIdToIdentity.get(client.sessionId);
-      for (const cursor of this.state.cursors.values()) {
-        if (cursor.cursorOwnerIdentity === identity) {
-          this.state.cursors.delete(cursor);
-          return;
-        }
+      if (cursorData) {
+        const cursor = new Cursor();
+        cursor.x = cursorData.x;
+        cursor.y = cursorData.y;
+        cursor.surfaceType = cursorData.surfaceType;
+        cursor.surfaceId = cursorData.surfaceId;
+        this.state.players.get(identity).cursor = cursor;
+      } else {
+        delete this.state.players.get(identity).cursor;
       }
     });
 
-    this.onMessage("cursorMouseDown", (client, cursorData) => {
+    this.onMessage("cursorMouseDown", (client, mouseDownData) => {
       const identity = sessionIdToIdentity.get(client.sessionId);
-      this.broadcast(
-        "cursorMouseDown",
-        new Cursor(
-          identity,
-          cursorData.screenOwnerIdentity,
-          cursorData.x,
-          cursorData.y
-        )
-      );
+      this.broadcast("cursorMouseDown", {
+        cursorOwnerIdentity: identity,
+        ...mouseDownData,
+      });
     });
 
     this.onMessage("appInfo", (client, appInfo) => {

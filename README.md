@@ -1,39 +1,27 @@
-# node-js-getting-started
+# Harbor - Colyseus
 
-A barebones Node.js app using [Express 4](http://expressjs.com/).
+This is the [Colyseus](https://www.colyseus.io/) server for Harbor. It's responsible for processing user inputs and synchronizing game state across clients. It doesn't handle media streams; this server is intentionally independent from the video call providers.
 
-This application supports the [Getting Started on Heroku with Node.js](https://devcenter.heroku.com/articles/getting-started-with-nodejs) article - check it out.
+## Setting up
 
-## Running Locally
-
-Make sure you have [Node.js](http://nodejs.org/) and the [Heroku CLI](https://cli.heroku.com/) installed.
+Just clone and install dependencies with:
 
 ```sh
-$ git clone https://github.com/heroku/node-js-getting-started.git # or clone your own fork
-$ cd node-js-getting-started
-$ npm install
-$ npm start
+npm install
+```
+
+## Starting Development
+
+```sh
+npm start
 ```
 
 Your app should now be running on [localhost:5000](http://localhost:5000/).
 
-## Deploying to Heroku
+## Deploying
+
+Currently hosted on the Heroku app virtual-office-server. To deploy, after dealing with the authentication stuff:
 
 ```
-$ heroku create
-$ git push heroku main
-$ heroku open
+git push heroku main
 ```
-or
-
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
-
-## Documentation
-
-For more information about using Node.js on Heroku, see these Dev Center articles:
-
-- [Getting Started on Heroku with Node.js](https://devcenter.heroku.com/articles/getting-started-with-nodejs)
-- [Heroku Node.js Support](https://devcenter.heroku.com/articles/nodejs-support)
-- [Node.js on Heroku](https://devcenter.heroku.com/categories/nodejs)
-- [Best Practices for Node.js Development](https://devcenter.heroku.com/articles/node-best-practices)
-- [Using WebSockets on Heroku with Node.js](https://devcenter.heroku.com/articles/node-websockets)

@@ -35,12 +35,6 @@ export class Cursor extends Schema {
 }
 
 export class Player extends Schema {
-  constructor(audioInputOn: boolean, videoInputOn: boolean) {
-    super();
-    this.audioInputOn = audioInputOn;
-    this.videoInputOn = videoInputOn;
-  }
-
   @type("number")
   color = _.sample([
     0xe6194b,
@@ -64,6 +58,9 @@ export class Player extends Schema {
     0x000075,
     0x808080,
   ]);
+
+  @type("string")
+  name = "";
 
   @type("number")
   x = Math.floor(Math.random() * 16);
@@ -94,13 +91,6 @@ export class Player extends Schema {
 }
 
 export class WorldObject extends Schema {
-  constructor(type: string, x: number, y: number) {
-    super();
-    this.type = type;
-    this.x = x;
-    this.y = y;
-  }
-
   @type("string")
   type: string;
 
@@ -124,7 +114,11 @@ export class State extends Schema {
 
   createPlayer(identity: string, audioInputOn: boolean, videoInputOn: boolean) {
     console.log("Creating player:", identity);
-    this.players.set(identity, new Player(audioInputOn, videoInputOn));
+
+    this.players.set(
+      identity,
+      new Player().assign({ audioInputOn, videoInputOn })
+    );
   }
 
   removePlayer(identity: string) {
@@ -153,7 +147,7 @@ export class MainRoom extends Room<State> {
   initWorld() {
     for (let i = 0; i < 16; i++) {
       for (let j = 0; j < 16; j++) {
-        const dot = new WorldObject("dot", i, j);
+        const dot = new WorldObject().assign({ type: "dot", x: i, y: j });
         this.state.addWorldObject(dot);
       }
     }
@@ -188,7 +182,7 @@ export class MainRoom extends Room<State> {
     });
 
     this.onMessage("updatePlayerCursor", (client, cursorData) => {
-      console.log("updating curosr", cursorData);
+      console.log("updating cursor", cursorData);
       const identity = sessionIdToIdentity.get(client.sessionId);
 
       if (cursorData) {

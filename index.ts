@@ -88,6 +88,9 @@ export class Player extends Schema {
 
   @type(Cursor)
   cursor: Cursor;
+
+  @type("string")
+  whisperingTo: string;
 }
 
 export class WorldObject extends Schema {

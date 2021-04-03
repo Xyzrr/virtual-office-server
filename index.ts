@@ -104,12 +104,66 @@ export class WorldObject extends Schema {
   y: number;
 }
 
+export class YoutubePlayer extends Schema {
+  @type("string")
+  id: string;
+
+  @type("string")
+  currentVideo: string;
+
+  // does not include current video
+  @type([ "string" ])
+  videoQueue: Array<string>;
+
+  @type("boolean")
+  isPlaying: boolean;
+
+  @type("number")
+  videoPosition: number;
+
+  pushVideo(videoId: string) {
+    if (this.currentVideo === undefined) {
+      this.currentVideo = videoId;
+      this.isPlaying = true;
+      this.videoPosition = 0;
+    } else {
+      this.videoQueue.push(videoId);
+    }
+  }
+
+  endVideo(videoId: string) {
+    if (this.currentVideo === videoId) {
+      if (this.videoQueue.length > 0) {
+        this.currentVideo = this.videoQueue.shift();
+        this.isPlaying = true;
+        this.videoPosition = 0;
+      } else {
+        this.currentVideo = undefined;
+        this.isPlaying = false;
+        this.videoPosition = 0;
+      }
+    }
+  }
+
+  removeVideo(index: number) {
+    this.videoQueue.splice(index, 1);
+  }
+
+  updateVideoState(isPlaying: boolean, videoPosition: number) {
+    this.isPlaying = isPlaying;
+    this.videoPosition = videoPosition;
+  }
+}
+
 export class State extends Schema {
   @type({ map: Player })
   players = new MapSchema<Player>();
 
   @type({ set: WorldObject })
   worldObjects = new SetSchema<WorldObject>();
+
+  @type({ map: YoutubePlayer })
+  youtubePlayers = new MapSchema<YoutubePlayer>();
 
   addWorldObject(worldObject: WorldObject) {
     this.worldObjects.add(worldObject);
@@ -144,6 +198,47 @@ export class State extends Schema {
     const player = this.players.get(identity);
     player.speed = speed;
   }
+
+  addYoutubePlayer(id: string) {
+    this.youtubePlayers.set(
+      id,
+      new YoutubePlayer().assign({
+        id,
+        currentVideo: undefined,
+        videoQueue: [],
+        isPlaying: false,
+        videoPosition: 0
+      })
+    );
+  }
+
+  removeYoutubePlayer(id: string) {
+    this.youtubePlayers.delete(id);
+  }
+
+  pushYoutubeVideo(id: string, videoId: string) {
+    const youtubePlayer = this.youtubePlayers.get(id);
+    youtubePlayer.pushVideo(videoId);
+    console.log('pushed youtube video', videoId);
+  }
+
+  endYoutubeVideo(id: string, videoId: string) {
+    const youtubePlayer = this.youtubePlayers.get(id);
+    youtubePlayer.endVideo(videoId);
+    console.log('youtube video ended', videoId);
+  }
+
+  removeYoutubeVideo(id: string, index: number) {
+    const youtubePlayer = this.youtubePlayers.get(id);
+    youtubePlayer.removeVideo(index);
+    console.log('youtube video removed', index);
+  }
+
+  updateYoutubePlayer(id: string, isPlaying: boolean, videoPosition: number) {
+    const youtubePlayer = this.youtubePlayers.get(id);
+    youtubePlayer.updateVideoState(isPlaying, videoPosition);
+    console.log('update youtube video', isPlaying, videoPosition);
+  }
 }
 
 export class MainRoom extends Room<State> {
@@ -154,6 +249,11 @@ export class MainRoom extends Room<State> {
         this.state.addWorldObject(dot);
       }
     }
+
+    this.state.addYoutubePlayer('youtube-player-1');
+    this.state.pushYoutubeVideo('youtube-player-1', 'M7lc1UVf-VE');
+    this.state.pushYoutubeVideo('youtube-player-1', 'HJb0VYVtaNc');
+    console.log(this.state)
   }
 
   onCreate(options: any) {
@@ -215,6 +315,22 @@ export class MainRoom extends Room<State> {
       sharedApp.title = appInfo.title;
       sharedApp.url = appInfo.url;
       this.state.players.get(identity).sharedApp = sharedApp;
+    });
+
+    this.onMessage("pushVideo", (client, pushVideoData) => {
+      this.state.pushYoutubeVideo(pushVideoData.id, pushVideoData.videoId);
+    });
+
+    this.onMessage("endVideo", (client, endVideoData) => {
+      this.state.endYoutubeVideo(endVideoData.id, endVideoData.videoId)
+    });
+
+    this.onMessage("removeVideo", (client, removeVideoData) => {
+      this.state.removeYoutubeVideo(removeVideoData.id, removeVideoData.index);
+    });
+
+    this.onMessage("updateVideo", (client, updateVideoData) => {
+      this.state.updateYoutubePlayer(updateVideoData.id, updateVideoData.isPlaying, updateVideoData.videoPosition)
     });
   }
 

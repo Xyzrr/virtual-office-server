@@ -104,7 +104,7 @@ export class WorldObject extends Schema {
   y: number;
 }
 
-export class YoutubePlayer extends Schema {
+export class YoutubePlayer extends WorldObject {
   @type("string")
   id: string;
 
@@ -199,10 +199,13 @@ export class State extends Schema {
     player.speed = speed;
   }
 
-  addYoutubePlayer(id: string) {
+  addYoutubePlayer(id: string, x: number, y: number) {
     this.youtubePlayers.set(
       id,
       new YoutubePlayer().assign({
+        type: 'youtube-player',
+        x,
+        y,
         id,
         currentVideo: undefined,
         videoQueue: [],
@@ -250,9 +253,9 @@ export class MainRoom extends Room<State> {
       }
     }
 
-    this.state.addYoutubePlayer('youtube-player-1');
-    this.state.pushYoutubeVideo('youtube-player-1', 'M7lc1UVf-VE');
-    this.state.pushYoutubeVideo('youtube-player-1', 'HJb0VYVtaNc');
+    this.state.addYoutubePlayer('youtube-player-1', 0, 0);
+    // this.state.pushYoutubeVideo('youtube-player-1', 'M7lc1UVf-VE');
+    this.state.pushYoutubeVideo('youtube-player-1', 'XZ-qspBsbqA');
     console.log(this.state)
   }
 

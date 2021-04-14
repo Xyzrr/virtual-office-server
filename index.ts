@@ -63,10 +63,10 @@ export class Player extends Schema {
   name = "";
 
   @type("number")
-  x = Math.floor(Math.random() * 16);
+  x = Math.floor(Math.random() * 16 * 32);
 
   @type("number")
-  y = Math.floor(Math.random() * 16);
+  y = Math.floor(Math.random() * 16 * 32);
 
   @type("number")
   dir = 0;
@@ -150,7 +150,11 @@ export class MainRoom extends Room<State> {
   initWorld() {
     for (let i = 0; i < 16; i++) {
       for (let j = 0; j < 16; j++) {
-        const dot = new WorldObject().assign({ type: "dot", x: i, y: j });
+        const dot = new WorldObject().assign({
+          type: "dot",
+          x: i * 32,
+          y: j * 32,
+        });
         this.state.addWorldObject(dot);
       }
     }

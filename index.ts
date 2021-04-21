@@ -255,11 +255,23 @@ export class MainRoom extends Room<State> {
 const app = express();
 app.use(express.json());
 
-app.get("/create-custom-token", async (req, res) => {
-  const decodedToken = await admin
-    .auth()
-    .verifyIdToken(req.query["id"].toString());
-  const customToken = await admin.auth().createCustomToken(decodedToken.uid);
+app.get("/create-custom-token", async (req, res, next) => {
+  let decodedToken: admin.auth.DecodedIdToken;
+  try {
+    decodedToken = await admin.auth().verifyIdToken(req.query["id"].toString());
+  } catch (e) {
+    next(e);
+    return;
+  }
+
+  let customToken: string;
+  try {
+    customToken = await admin.auth().createCustomToken(decodedToken.uid);
+  } catch (e) {
+    next(e);
+    return;
+  }
+
   res.send(customToken);
 });
 

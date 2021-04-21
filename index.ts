@@ -4,8 +4,14 @@ import { Room, Client, Server } from "colyseus";
 import { Schema, type, MapSchema, SetSchema } from "@colyseus/schema";
 import { createServer } from "http";
 import * as _ from "lodash";
+import admin from "firebase-admin";
+import serviceAccountKey from "./serviceAccountKey.json";
 
 const PORT = process.env.PORT || 5000;
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccountKey as any),
+});
 
 const sessionIdToIdentity = new Map<string, string>();
 
@@ -248,6 +254,14 @@ export class MainRoom extends Room<State> {
 
 const app = express();
 app.use(express.json());
+
+app.get("/create-custom-token", async (req, res) => {
+  const decodedToken = await admin
+    .auth()
+    .verifyIdToken(req.query["id"].toString());
+  const customToken = await admin.auth().createCustomToken(decodedToken.uid);
+  res.send(customToken);
+});
 
 const gameServer = new Server({
   server: createServer(app),

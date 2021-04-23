@@ -1,6 +1,6 @@
 import express from "express";
 
-import { Room, Client, Server } from "colyseus";
+import { Room, Client, Server, matchMaker, LobbyRoom } from "colyseus";
 import { Schema, type, MapSchema, SetSchema } from "@colyseus/schema";
 import { createServer } from "http";
 import * as _ from "lodash";
@@ -153,9 +153,18 @@ export class State extends Schema {
 }
 
 export class MainRoom extends Room<State> {
-  initWorld() {
+  autoDispose = false;
+  spaceId: string;
+
+  initWorld(hollow: boolean) {
     for (let i = 0; i < 16; i++) {
       for (let j = 0; j < 16; j++) {
+        if (hollow) {
+          if (i !== 0 && j !== 0 && i !== 15 && j !== 15) {
+            continue;
+          }
+        }
+
         const dot = new WorldObject().assign({
           type: "dot",
           x: i * 32,
@@ -167,11 +176,15 @@ export class MainRoom extends Room<State> {
   }
 
   onCreate(options: any) {
-    console.log("room created", options);
+    console.log("ROOM CREATED:", options);
 
     this.setState(new State());
 
-    this.initWorld();
+    this.setMetadata({
+      spaceId: options.spaceId,
+      spaceName: options.spaceName,
+    });
+    this.initWorld(options.spaceId === "midnight");
 
     this.onMessage("setPlayerDirection", (client, dir) => {
       const identity = sessionIdToIdentity.get(client.sessionId);
@@ -233,6 +246,7 @@ export class MainRoom extends Room<State> {
   }
 
   onJoin(client: Client, options: any) {
+    console.log("CLIENT JOINED:", options);
     sessionIdToIdentity.set(client.sessionId, options.identity);
     this.state.createPlayer(
       options.identity,
@@ -248,7 +262,7 @@ export class MainRoom extends Room<State> {
   }
 
   onDispose() {
-    console.log("dispose");
+    console.log("DISPOSED");
   }
 }
 
@@ -280,7 +294,21 @@ const gameServer = new Server({
   express: app,
 });
 
-gameServer.define("main", MainRoom).enableRealtimeListing();
+gameServer
+  .define("main", MainRoom)
+  .filterBy(["spaceId"])
+  .enableRealtimeListing();
+
+gameServer.define("lobby", LobbyRoom);
+
+matchMaker.createRoom("main", {
+  spaceId: "welcome",
+  spaceName: "Welcome harbor",
+});
+matchMaker.createRoom("main", {
+  spaceId: "midnight",
+  spaceName: "Midnight lounge",
+});
 
 console.log("Listening on port", PORT);
 gameServer.listen(Number(PORT));

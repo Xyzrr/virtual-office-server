@@ -1,4 +1,4 @@
-import express from "express";
+import express, { ErrorRequestHandler } from "express";
 
 import { Room, Client, Server, matchMaker, LobbyRoom } from "colyseus";
 import { Schema, type, MapSchema, SetSchema } from "@colyseus/schema";
@@ -111,6 +111,9 @@ export class WorldObject extends Schema {
 }
 
 export class State extends Schema {
+  @type("string")
+  spaceName: string;
+
   @type({ map: Player })
   players = new MapSchema<Player>();
 
@@ -154,7 +157,6 @@ export class State extends Schema {
 
 export class MainRoom extends Room<State> {
   autoDispose = false;
-  spaceId: string;
 
   initWorld(hollow: boolean) {
     for (let i = 0; i < 16; i++) {
@@ -178,7 +180,7 @@ export class MainRoom extends Room<State> {
   onCreate(options: any) {
     console.log("ROOM CREATED:", options);
 
-    this.setState(new State());
+    this.setState(new State().assign({ spaceName: options.spaceName }));
 
     this.setMetadata({
       spaceId: options.spaceId,
@@ -303,11 +305,11 @@ gameServer.define("lobby", LobbyRoom);
 
 matchMaker.createRoom("main", {
   spaceId: "welcome",
-  spaceName: "Welcome harbor",
+  spaceName: "Welcome Harbor",
 });
 matchMaker.createRoom("main", {
   spaceId: "midnight",
-  spaceName: "Midnight lounge",
+  spaceName: "Midnight Lounge",
 });
 
 console.log("Listening on port", PORT);

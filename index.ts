@@ -42,28 +42,7 @@ export class Cursor extends Schema {
 
 export class Player extends Schema {
   @type("number")
-  color = _.sample([
-    0xe6194b,
-    0x3cb44b,
-    0xffe119,
-    0x4363d8,
-    0xf58231,
-    0x911eb4,
-    0x46f0f0,
-    0xf032e6,
-    0xbcf60c,
-    0xfabebe,
-    0x008080,
-    0xe6beff,
-    0x9a6324,
-    0xfffac8,
-    0x800000,
-    0xaaffc3,
-    0x808000,
-    0xffd8b1,
-    0x000075,
-    0x808080,
-  ]);
+  color = 0;
 
   @type("string")
   name = "";
@@ -124,12 +103,17 @@ export class State extends Schema {
     this.worldObjects.add(worldObject);
   }
 
-  createPlayer(identity: string, audioInputOn: boolean, videoInputOn: boolean) {
+  createPlayer(
+    identity: string,
+    color: number,
+    audioInputOn: boolean,
+    videoInputOn: boolean
+  ) {
     console.log("Creating player:", identity);
 
     this.players.set(
       identity,
-      new Player().assign({ audioInputOn, videoInputOn })
+      new Player().assign({ color, audioInputOn, videoInputOn })
     );
   }
 
@@ -252,6 +236,7 @@ export class MainRoom extends Room<State> {
     sessionIdToIdentity.set(client.sessionId, options.identity);
     this.state.createPlayer(
       options.identity,
+      options.color,
       options.audioInputOn,
       options.videoInputOn
     );

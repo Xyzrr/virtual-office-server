@@ -121,6 +121,9 @@ export class YoutubePlayer extends WorldObject {
   @type("number")
   videoPosition: number;
 
+  @type("number")
+  syn: number;
+
   pushVideo(videoId: string) {
     if (this.currentVideo === undefined) {
       this.currentVideo = videoId;
@@ -131,8 +134,8 @@ export class YoutubePlayer extends WorldObject {
     }
   }
 
-  endVideo(videoId: string) {
-    if (this.currentVideo === videoId) {
+  endVideo(syn: number) {
+    if (this.syn === syn) {
       if (this.videoQueue.length > 0) {
         this.currentVideo = this.videoQueue.shift();
         this.isPlaying = true;
@@ -142,6 +145,7 @@ export class YoutubePlayer extends WorldObject {
         this.isPlaying = false;
         this.videoPosition = 0;
       }
+      this.syn += 1;
     }
   }
 
@@ -149,9 +153,18 @@ export class YoutubePlayer extends WorldObject {
     this.videoQueue.splice(index, 1);
   }
 
-  updateVideoState(isPlaying: boolean, videoPosition: number) {
-    this.isPlaying = isPlaying;
-    this.videoPosition = videoPosition;
+  setIsPlaying(isPlaying: boolean, syn: number) {
+    if (this.syn === syn) {
+      this.isPlaying = isPlaying;
+      this.syn += 1;
+    }
+  }
+
+  setVideoPosition(videoPosition: number, syn: number) {
+    if (this.syn === syn) {
+      this.videoPosition = videoPosition;
+      this.syn += 1;
+    }
   }
 }
 
@@ -210,7 +223,8 @@ export class State extends Schema {
         currentVideo: undefined,
         videoQueue: [],
         isPlaying: false,
-        videoPosition: 0
+        videoPosition: 0,
+        syn: 0,
       })
     );
   }
@@ -225,10 +239,11 @@ export class State extends Schema {
     console.log('pushed youtube video', videoId);
   }
 
-  endYoutubeVideo(id: string, videoId: string) {
+  endYoutubeVideo(id: string, syn: number) {
     const youtubePlayer = this.youtubePlayers.get(id);
-    youtubePlayer.endVideo(videoId);
-    console.log('youtube video ended', videoId);
+    const endedVideo = youtubePlayer.currentVideo;
+    youtubePlayer.endVideo(syn);
+    console.log('youtube video ended', endedVideo, syn);
   }
 
   removeYoutubeVideo(id: string, index: number) {
@@ -237,10 +252,16 @@ export class State extends Schema {
     console.log('youtube video removed', index);
   }
 
-  updateYoutubePlayer(id: string, isPlaying: boolean, videoPosition: number) {
+  updateVideoIsPlaying(id: string, localIdentity: string, isPlaying: boolean, syn: number) {
     const youtubePlayer = this.youtubePlayers.get(id);
-    youtubePlayer.updateVideoState(isPlaying, videoPosition);
-    console.log('update youtube video', isPlaying, videoPosition);
+    youtubePlayer.setIsPlaying(isPlaying, syn);
+    console.log('set youtube video is playing', localIdentity, isPlaying, syn);
+  }
+
+  updateVideoPosition(id: string, localIdentity: string, videoPosition: number, syn: number) {
+    const youtubePlayer = this.youtubePlayers.get(id);
+    youtubePlayer.setVideoPosition(videoPosition, syn);
+    console.log('set youtube video position', localIdentity, videoPosition, syn);
   }
 }
 
@@ -254,8 +275,10 @@ export class MainRoom extends Room<State> {
     }
 
     this.state.addYoutubePlayer('youtube-player-1', 0, 0);
-    // this.state.pushYoutubeVideo('youtube-player-1', 'M7lc1UVf-VE');
+    // this.state.pushYoutubeVideo('youtube-player-1', 'HJb0VYVtaNc');
+    this.state.pushYoutubeVideo('youtube-player-1', 'M7lc1UVf-VE');
     this.state.pushYoutubeVideo('youtube-player-1', 'XZ-qspBsbqA');
+    this.state.pushYoutubeVideo('youtube-player-1', 'AoOeTBD1iEQ');
     console.log(this.state)
   }
 
@@ -325,15 +348,19 @@ export class MainRoom extends Room<State> {
     });
 
     this.onMessage("endVideo", (client, endVideoData) => {
-      this.state.endYoutubeVideo(endVideoData.id, endVideoData.videoId)
+      this.state.endYoutubeVideo(endVideoData.id, endVideoData.syn)
     });
 
     this.onMessage("removeVideo", (client, removeVideoData) => {
       this.state.removeYoutubeVideo(removeVideoData.id, removeVideoData.index);
     });
 
-    this.onMessage("updateVideo", (client, updateVideoData) => {
-      this.state.updateYoutubePlayer(updateVideoData.id, updateVideoData.isPlaying, updateVideoData.videoPosition)
+    this.onMessage("updateVideoIsPlaying", (client, updateVideoData) => {
+      this.state.updateVideoIsPlaying(updateVideoData.id, updateVideoData.localIdentity, updateVideoData.isPlaying, updateVideoData.syn)
+    });
+
+    this.onMessage("updateVideoPosition", (client, updateVideoData) => {
+      this.state.updateVideoPosition(updateVideoData.id, updateVideoData.localIdentity, updateVideoData.videoPosition, updateVideoData.syn)
     });
   }
 

@@ -225,6 +225,14 @@ export class MainRoom extends Room<State> {
       sharedApp.url = appInfo.url;
       this.state.players.get(identity).sharedApp = sharedApp;
     });
+
+    this.onMessage("chatMessage", (client, message) => {
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      this.broadcast("chatMessage", {
+        sender: identity,
+        ...message,
+      });
+    });
   }
 
   onAuth(client: any, options: any, req: any) {

@@ -249,16 +249,25 @@ export class MainRoom extends Room<State> {
       const identity = sessionIdToIdentity.get(client.sessionId);
       this.broadcast("messageOperations", {
         senderIdentity: identity,
-        ...message
+        ...message,
       });
     });
 
-    this.onMessage("finishMessage", (client, messageId) => {
-      console.log("Finished chat message:", messageId);
+    this.onMessage("finishMessage", (client, options) => {
+      console.log("Finished chat message:", options);
       const identity = sessionIdToIdentity.get(client.sessionId);
       this.broadcast("finishMessage", {
         senderIdentity: identity,
-        messageId,
+        ...options,
+      });
+    });
+
+    this.onMessage("deleteMessage", (client, options) => {
+      console.log("Deleted chat message:", options);
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      this.broadcast("deleteMessage", {
+        senderIdentity: identity,
+        ...options,
       });
     });
   }

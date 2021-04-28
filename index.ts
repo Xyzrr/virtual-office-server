@@ -236,7 +236,7 @@ export class MainRoom extends Room<State> {
     });
 
     this.onMessage("startMessage", (client, message) => {
-      console.log("Received chat message:", message);
+      console.log("Started chat message:", message);
       const identity = sessionIdToIdentity.get(client.sessionId);
       this.broadcast("startMessage", {
         senderIdentity: identity,
@@ -244,12 +244,21 @@ export class MainRoom extends Room<State> {
       });
     });
 
-    this.onMessage("messageOperation", (client, message) => {
-      console.log("Received chat message:", message);
+    this.onMessage("messageOperations", (client, message) => {
+      console.log("Received chat operations:", message);
       const identity = sessionIdToIdentity.get(client.sessionId);
-      this.broadcast("messageOperation", {
+      this.broadcast("messageOperations", {
         senderIdentity: identity,
-        ...message,
+        ...message
+      });
+    });
+
+    this.onMessage("finishMessage", (client, messageId) => {
+      console.log("Finished chat message:", messageId);
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      this.broadcast("finishMessage", {
+        senderIdentity: identity,
+        messageId,
       });
     });
   }

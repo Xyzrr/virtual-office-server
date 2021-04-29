@@ -105,6 +105,7 @@ export class State extends Schema {
 
   createPlayer(
     identity: string,
+    name: string,
     color: number,
     audioInputOn: boolean,
     videoInputOn: boolean
@@ -113,7 +114,7 @@ export class State extends Schema {
 
     this.players.set(
       identity,
-      new Player().assign({ color, audioInputOn, videoInputOn })
+      new Player().assign({ name, color, audioInputOn, videoInputOn })
     );
   }
 
@@ -281,6 +282,7 @@ export class MainRoom extends Room<State> {
     sessionIdToIdentity.set(client.sessionId, options.identity);
     this.state.createPlayer(
       options.identity,
+      options.name,
       options.color,
       options.audioInputOn,
       options.videoInputOn

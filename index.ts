@@ -305,9 +305,9 @@ export class MainRoom extends Room<State> {
         this.state.players.get(identity).connected = true;
       } catch (e) {
         console.log("Removing player without consent:", identity);
-        this.state.removePlayer(identity);
+        sessionIdToIdentity.delete(client.sessionId);
         if (!this.state.players.get(identity).connected) {
-          sessionIdToIdentity.delete(client.sessionId);
+          this.state.removePlayer(identity);
         }
       }
     }

@@ -76,6 +76,9 @@ export class Player extends Schema {
 
   @type("string")
   whisperingTo: string;
+
+  @type("boolean")
+  connected = true;
 }
 
 export class WorldObject extends Schema {
@@ -119,7 +122,6 @@ export class State extends Schema {
   }
 
   removePlayer(identity: string) {
-    console.log("Removing player:", identity);
     this.players.delete(identity);
   }
 
@@ -289,10 +291,24 @@ export class MainRoom extends Room<State> {
     );
   }
 
-  onLeave(client: Client) {
+  async onLeave(client: Client, consented: boolean) {
     const identity = sessionIdToIdentity.get(client.sessionId);
-    this.state.removePlayer(identity);
-    sessionIdToIdentity.delete(client.sessionId);
+    if (consented) {
+      console.log("Removing player consensually:", identity);
+      this.state.removePlayer(identity);
+      sessionIdToIdentity.delete(client.sessionId);
+    } else {
+      console.log("Player disconnected:", identity);
+      try {
+        this.state.players.get(identity).connected = false;
+        await this.allowReconnection(client, 20);
+        this.state.players.get(identity).connected = true;
+      } catch (e) {
+        console.log("Removing player without consent:", identity);
+        this.state.removePlayer(identity);
+        sessionIdToIdentity.delete(client.sessionId);
+      }
+    }
   }
 
   onDispose() {

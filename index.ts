@@ -303,6 +303,7 @@ export class MainRoom extends Room<State> {
         this.state.players.get(identity).connected = false;
         await this.allowReconnection(client, 20);
         this.state.players.get(identity).connected = true;
+        console.log("Player successfully reconnected:", identity);
       } catch (e) {
         console.log("Removing player without consent:", identity);
         sessionIdToIdentity.delete(client.sessionId);

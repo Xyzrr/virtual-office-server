@@ -273,6 +273,15 @@ export class MainRoom extends Room<State> {
         ...options,
       });
     });
+
+    this.onMessage("command", (client, options) => {
+      console.log("Received command:", options);
+      const identity = sessionIdToIdentity.get(client.sessionId);
+      this.broadcast("command", {
+        senderIdentity: identity,
+        ...options,
+      });
+    });
   }
 
   onAuth(client: any, options: any, req: any) {

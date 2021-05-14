@@ -6,6 +6,7 @@ import { createServer } from "http";
 import * as _ from "lodash";
 import admin from "firebase-admin";
 import serviceAccountKey from "./serviceAccountKey.json";
+import { v4 as uuid } from "uuid";
 
 const PORT = process.env.PORT || 5000;
 
@@ -99,11 +100,11 @@ export class State extends Schema {
   @type({ map: Player })
   players = new MapSchema<Player>();
 
-  @type({ set: WorldObject })
-  worldObjects = new SetSchema<WorldObject>();
+  @type({ map: WorldObject })
+  worldObjects = new MapSchema<WorldObject>();
 
-  addWorldObject(worldObject: WorldObject) {
-    this.worldObjects.add(worldObject);
+  addWorldObject(id: string, worldObject: WorldObject) {
+    this.worldObjects.set(id, worldObject);
   }
 
   createPlayer(
@@ -156,10 +157,10 @@ export class MainRoom extends Room<State> {
 
         const dot = new WorldObject().assign({
           type: "dot",
-          x: i * 32,
-          y: j * 32,
+          x: i * 16,
+          y: j * 16,
         });
-        this.state.addWorldObject(dot);
+        this.state.addWorldObject(uuid(), dot);
       }
     }
   }

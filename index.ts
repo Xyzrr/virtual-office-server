@@ -52,10 +52,10 @@ export class Player extends Schema {
   photoUrl = "";
 
   @type("number")
-  x = Math.floor(Math.random() * 16 * 32);
+  x = Math.floor(Math.random() * 16 * 16);
 
   @type("number")
-  y = Math.floor(Math.random() * 16 * 32);
+  y = Math.floor(Math.random() * 16 * 16);
 
   @type("number")
   dir = 0;

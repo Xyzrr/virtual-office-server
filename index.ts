@@ -48,6 +48,9 @@ export class Player extends Schema {
   @type("string")
   name = "";
 
+  @type("string")
+  photoUrl = "";
+
   @type("number")
   x = Math.floor(Math.random() * 16 * 32);
 

@@ -67,6 +67,9 @@ export class Player extends Schema {
   audioInputOn: boolean;
 
   @type("boolean")
+  audioOutputOn: boolean;
+
+  @type("boolean")
   videoInputOn: boolean;
 
   @type("boolean")
@@ -115,13 +118,20 @@ export class State extends Schema {
     name: string,
     color: number,
     audioInputOn: boolean,
+    audioOutputOn: boolean,
     videoInputOn: boolean
   ) {
     console.log("Creating player:", identity);
 
     this.players.set(
       identity,
-      new Player().assign({ name, color, audioInputOn, videoInputOn })
+      new Player().assign({
+        name,
+        color,
+        audioInputOn,
+        audioOutputOn,
+        videoInputOn,
+      })
     );
   }
 
@@ -300,6 +310,7 @@ export class MainRoom extends Room<State> {
       options.name,
       options.color,
       options.audioInputOn,
+      options.audioOutputOn,
       options.videoInputOn
     );
   }

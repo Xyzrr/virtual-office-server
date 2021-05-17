@@ -116,6 +116,7 @@ export class State extends Schema {
   createPlayer(
     identity: string,
     name: string,
+    photoUrl: string | null,
     color: number,
     audioInputOn: boolean,
     audioOutputOn: boolean,
@@ -127,6 +128,7 @@ export class State extends Schema {
       identity,
       new Player().assign({
         name,
+        photoUrl,
         color,
         audioInputOn,
         audioOutputOn,
@@ -299,6 +301,7 @@ export class MainRoom extends Room<State> {
   }
 
   onAuth(client: any, options: any, req: any) {
+    console.log("Heres what im working with", client, options, req);
     return true;
   }
 
@@ -308,6 +311,7 @@ export class MainRoom extends Room<State> {
     this.state.createPlayer(
       options.identity,
       options.name,
+      options.photoUrl,
       options.color,
       options.audioInputOn,
       options.audioOutputOn,
@@ -378,6 +382,10 @@ gameServer
 
 gameServer.define("lobby", LobbyRoom);
 
+matchMaker.createRoom("main", {
+  spaceId: "wandb-growth",
+  spaceName: "W&B Growth",
+});
 matchMaker.createRoom("main", {
   spaceId: "welcome",
   spaceName: "Welcome Harbor",

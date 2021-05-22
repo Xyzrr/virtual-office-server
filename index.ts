@@ -189,7 +189,7 @@ export class MainRoom extends Room<State> {
       spaceId: options.spaceId,
       spaceName: options.spaceName,
     });
-    this.initWorld(options.spaceId === "midnight");
+    this.initWorld(options.spaceId === "night");
 
     this.onMessage("setPlayerDirection", (client, dir) => {
       const identity = sessionIdToIdentity.get(client.sessionId);
@@ -391,8 +391,8 @@ matchMaker.createRoom("main", {
   spaceName: "Welcome Harbor",
 });
 matchMaker.createRoom("main", {
-  spaceId: "midnight",
-  spaceName: "Midnight Lounge",
+  spaceId: "night",
+  spaceName: "Night Lounge",
 });
 
 console.log("Listening on port", PORT);

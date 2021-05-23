@@ -86,6 +86,15 @@ export class Player extends Schema {
 
   @type("boolean")
   connected = true;
+
+  @type("number")
+  busySince?: number;
+
+  @type("number")
+  busyUntil?: number;
+
+  @type("string")
+  busyType?: string;
 }
 
 export class WorldObject extends Schema {
